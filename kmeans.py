@@ -164,7 +164,7 @@ def normalize_data():
     # scaler = RobustScaler()
     # scaler = Normalizer()
     scaler = MinMaxScaler()
-    
+
     dataset = scaler.fit_transform(dataset)
 
 def run():

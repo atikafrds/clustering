@@ -18,6 +18,7 @@ import numpy as np
 data = np.array(arr)
 print("Data shape : ")
 print(data.shape)
+print(data)
 
 print('Done creating data, start calculating pairwise distances')
 
