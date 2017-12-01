@@ -74,7 +74,6 @@ def initialize_centroids():
         for row in range(len(init_centroids)):
             last_centroids.append(init_centroids[row].tolist())
             centroids.append(init_centroids[row].tolist())
-        print("panjangan centroids : ",len(centroids[0]))
 
 def assign_clusters():
     global data_clusters
@@ -90,8 +89,28 @@ def assign_clusters():
 
     data_clusters = new_data_clusters
 
-# def purity():
-# 	for i in range(k):
+def calculate_purity():
+    global labels
+    global data_clusters
+
+    majority_count = 0
+
+    for i in range(k):
+        labels_in_clusters = {}
+        for (idx, value) in enumerate(data_clusters):
+            if value == i:
+                if labels[idx] in labels_in_clusters:
+                    labels_in_clusters[labels[idx]] += 1
+                else:
+                    labels_in_clusters[labels[idx]] =  1
+        print("Cluster",i)
+        max_idx = max(labels_in_clusters, key=labels_in_clusters.get)
+        print("Class comparation in cluster :",labels_in_clusters)
+        print("Majority class in cluster :", labels_in_clusters[max_idx])
+        print()
+        majority_count += labels_in_clusters[max_idx]
+
+    return round((majority_count/int(len(dataset)))*100, 2)
 
 def get_new_centroids():
     global last_centroids
@@ -162,15 +181,15 @@ def normalize_data():
 
     # scaler = MaxAbsScaler()
     # scaler = RobustScaler()
-    # scaler = Normalizer()
-    scaler = MinMaxScaler()
+    scaler = Normalizer()
+    # scaler = MinMaxScaler()
     
     dataset = scaler.fit_transform(dataset)
 
 def run():
     random.seed()
     read_dataset()
-    normalize_data(3)
+    normalize_data()
     initialize_centroids()
     print()
     print("INITIAL CENTROIDS")
@@ -186,11 +205,13 @@ def run():
         print("Centroid Cluster ", i, ": ", centroids[i])
     for i in range(len(centroids)):
         print("Amount of data in cluster ", i, ": ", data_clusters.count(i))
-    if (k==2):
-    	print()
-    	error = round((compare_data()/int(len(dataset)))*100,2)
-    	print("Accuracy: ", (100-error), "%")
-    	print("Error: ", error, "%")
+    # if (k==2):
+    # 	print()
+    # 	error = round((compare_data()/int(len(dataset)))*100,2)
+    # 	print("Accuracy: ", (100-error), "%")
+    # 	print("Error: ", error, "%")
+    print()
+    print("Purity : ", calculate_purity())
     # print("\n\n\n")
     # for i in range(len(dataset)):
     #     print(str(i) + " -> Cluster " + str(data_clusters[i]))
