@@ -5,12 +5,18 @@ import numpy as np
 import math
 import random
 import copy
-
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MaxAbsScaler
+from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import Normalizer
 
 k = 0
 max_iter = 0
+temp_dataset = None
 dataset = None
 labels = []
+new_label = ""
 init_centroids = None
 centroids = []
 last_centroids = []
@@ -28,8 +34,10 @@ def euclidian_distance(vector1, vector2):
 
     return math.sqrt(distance)
 
+
 def read_dataset():
     global k
+    global temp_dataset
     global dataset
     global max_iter
     global init_centroids
@@ -39,14 +47,17 @@ def read_dataset():
     else:
         k = int(sys.argv[1])
         max_iter = int(sys.argv[2])
-        dataset = np.genfromtxt(sys.argv[3], delimiter=', ', dtype=None, usecols=(0, 2, 4, 10, 11, 12),
+        temp_dataset = np.genfromtxt(sys.argv[3], delimiter=', ', dtype=None, usecols=(0, 2, 4, 10, 11, 12),
             names=('age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week'))
-        # labels = np.loadtxt(sys.argv[3], delimiter=',', dtype=str, usecols=(14))
-        # labels = np.genfromtxt(sys.argv[3], delimiter=', ', dtype=None, usecols=(14),
-        #     names=('label'))
+        dataset = [list(elem) for elem in temp_dataset]
+
         with open(sys.argv[3]) as f:
             for line in f:
-                labels.append(line.split(',')[-1])
+                new_label = str(line.split(', ')[-1])
+                if (str(new_label) == ">50K\n"):
+                    labels.append(0)
+                else:
+                    labels.append(1)
         if len(sys.argv) == 5:
             init_centroids = np.genfromtxt(sys.argv[4], delimiter=', ', dtype=None)
 
@@ -63,37 +74,41 @@ def initialize_centroids():
         for row in range(len(init_centroids)):
             last_centroids.append(init_centroids[row].tolist())
             centroids.append(init_centroids[row].tolist())
-
+        print("panjangan centroids : ",len(centroids[0]))
 
 def assign_clusters():
     global data_clusters
 
     new_data_clusters = []
     for i in range(len(dataset)):
-        distance0 = euclidian_distance(dataset[i], centroids[0])
-        distance1 = euclidian_distance(dataset[i], centroids[1])
-        if distance0 < distance1:
-            new_data_clusters.append(0)
-        else:
-            new_data_clusters.append(1)
+        centroids_distance = []
+        for k_idx in range(k):
+            distance = euclidian_distance(dataset[i], centroids[k_idx])
+            centroids_distance.append(distance)
+        value, idx = min((value, idx) for (idx, value) in enumerate(centroids_distance))
+        new_data_clusters.append(idx);
 
     data_clusters = new_data_clusters
 
+# def purity():
+# 	for i in range(k):
 
 def get_new_centroids():
     global last_centroids
     global centroids
 
-    # List of lists that holds [[coordinates]] for each of the k clusters (averaged per cluster)
     cluster_mean = []
 
     for cluster_number in range(k):
-        summed_atr = [0] * 6
+        summed_atr = [0] * int(len(dataset[0]))
 
         data_in_cluster_counter = 0.0
         for assignment_row in range(len(data_clusters)):
             if cluster_number == data_clusters[assignment_row]:
-                summed_atr = [x + y for x, y in zip(summed_atr, dataset[assignment_row])]
+                try:
+                    summed_atr = [x + y for x, y in zip(summed_atr, dataset[assignment_row])]
+                except:
+                    print(dataset[assignment_row])
                 data_in_cluster_counter += 1.0
 
         if data_in_cluster_counter == 0.0:
@@ -119,29 +134,63 @@ def has_converged():
 
 def run_k_means():
     for iteration in range(max_iter):
-        print(iteration)
+        if iteration % 10 == 0:
+            print("Iteration: ", iteration)
 
         assign_clusters()
 
         get_new_centroids()
 
         if has_converged():
+            print("Stop at number of iteration: ", iteration)
             return None
+
+def compare_data():
+    counter=0
+    if data_clusters.count(0) >= data_clusters.count(1):
+        for i in range(len(dataset)):
+            if(data_clusters[i]==labels[i]):
+                counter+=1
+    else:
+        for i in range(len(dataset)):
+            if(data_clusters[i]!=labels[i]):
+                counter+=1
+    return counter
+
+def normalize_data():
+    global dataset
+
+    # scaler = MaxAbsScaler()
+    # scaler = RobustScaler()
+    # scaler = Normalizer()
+    scaler = MinMaxScaler()
+    
+    dataset = scaler.fit_transform(dataset)
 
 def run():
     random.seed()
-
     read_dataset()
+    normalize_data(3)
     initialize_centroids()
-    print(centroids)
-    print(str(len(labels)))
-    # print(labels)
-    # print(dataset)
+    print()
+    print("INITIAL CENTROIDS")
+    for i in range(len(centroids)):
+        print("Centroid cluster ", i, ": ", centroids[i])
+    print()
+    print("Start clustering..")
+    print()
     run_k_means()
-    print("CENTROIDS\n")
-    print(centroids)
-    print("Count 0: " + str(data_clusters.count(0)))
-    print("Count 1: " + str(data_clusters.count(1)))
+    print()
+    print("CLUSTERING DONE")
+    for i in range(len(centroids)):
+        print("Centroid Cluster ", i, ": ", centroids[i])
+    for i in range(len(centroids)):
+        print("Amount of data in cluster ", i, ": ", data_clusters.count(i))
+    if (k==2):
+    	print()
+    	error = round((compare_data()/int(len(dataset)))*100,2)
+    	print("Accuracy: ", (100-error), "%")
+    	print("Error: ", error, "%")
     # print("\n\n\n")
     # for i in range(len(dataset)):
     #     print(str(i) + " -> Cluster " + str(data_clusters[i]))
